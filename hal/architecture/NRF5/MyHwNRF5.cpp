@@ -109,8 +109,12 @@ bool hwInit(void)
 	NRF_UART0->TASKS_SUSPEND = 1;
 
 #ifdef MY_DISABLED_SERIAL
+  NRF_UART0->ENABLE = 0;
+
 	// Disable UART, when not configured
-	NRF_UART0->POWER = 0;
+#ifdef NRF51
+		NRF_UART0->POWER = 0;
+#endif
 #else
 	// Configure UART
 	MY_SERIALDEVICE.begin(MY_BAUD_RATE);
@@ -120,13 +124,13 @@ bool hwInit(void)
 #endif
 #endif
 
-#ifdef NRF52
-	// Disable NFC 
-	NRF_NFCT->TASKS_DISABLE = 1;
-	NRF_NVMC->CONFIG = 1;
-	NRF_UICR->NFCPINS = 0;
-	NRF_NVMC->CONFIG = 0;	
-#endif
+//#ifdef NRF52
+//	// Disable NFC 
+//	NRF_NFCT->TASKS_DISABLE = 1;
+//	NRF_NVMC->CONFIG = 1;
+//	NRF_UICR->NFCPINS = 0;
+//	NRF_NVMC->CONFIG = 0;	
+//#endif
 
 	return true;
 }
@@ -476,7 +480,7 @@ uint16_t hwCPUVoltage(void)
 #elif defined(NRF_SAADC)
 	// NRF52:
 	// Sampling time 3uS@700uA
-	int32_t sample;
+	int32_t sample = 0;
 	NRF_SAADC->ENABLE = SAADC_ENABLE_ENABLE_Enabled << SAADC_ENABLE_ENABLE_Pos;
 	NRF_SAADC->RESOLUTION = SAADC_RESOLUTION_VAL_8bit << SAADC_RESOLUTION_VAL_Pos;
 	NRF_SAADC->CH[0].PSELP = SAADC_CH_PSELP_PSELP_VDD << SAADC_CH_PSELP_PSELP_Pos;
@@ -529,7 +533,18 @@ uint16_t hwCPUFrequency(void)
 
 int8_t hwCPUTemperature(void)
 {
-	return -127; // not implemented yet
+	uint32_t Temperature = 0;
+
+	for (byte i = 0; i < 10; i++) {
+    NRF_TEMP->TASKS_START = 1;
+    while (!(NRF_TEMP->EVENTS_DATARDY)) {}
+    Temperature += NRF_TEMP->TEMP;
+    wait(10);
+  }
+
+	//10 values for average
+	//Temperature in degC (0.25deg steps)
+  return (int8_t)(Temperature / 40);
 }
 
 uint16_t hwFreeMem(void)
