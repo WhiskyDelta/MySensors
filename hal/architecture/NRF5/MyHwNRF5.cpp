@@ -110,9 +110,7 @@ bool hwInit(void)
 
 #ifdef MY_DISABLED_SERIAL
 	// Disable UART, when not configured
-#ifdef NRF51
 	NRF_UART0->POWER = 0;
-#endif
 #else
 	// Configure UART
 	MY_SERIALDEVICE.begin(MY_BAUD_RATE);
@@ -120,6 +118,14 @@ bool hwInit(void)
 	while (!MY_SERIALDEVICE) {
 	}
 #endif
+#endif
+
+#ifdef NRF52
+	// Disable NFC 
+	NRF_NFCT->TASKS_DISABLE = 1;
+	NRF_NVMC->CONFIG = 1;
+	NRF_UICR->NFCPINS = 0;
+	NRF_NVMC->CONFIG = 0;	
 #endif
 
 	return true;
