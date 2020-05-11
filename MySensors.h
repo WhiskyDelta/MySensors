@@ -60,6 +60,11 @@
 #elif defined(ARDUINO_ARCH_ESP32)
 #include "hal/architecture/ESP32/MyHwESP32.cpp"
 #include "hal/crypto/ESP32/MyCryptoESP32.cpp"
+#elif defined(ARDUINO_ARCH_XI)
+//#include "hal/architecture/AVR/drivers/DigitalWriteFast/digitalWriteFast.h"
+#include "hal/architecture/lgt8f/MyHwlgt8f.cpp"
+#include "hal/crypto/generic/MyCryptoGeneric.cpp"
+//#include "hal/crypto/AVR/MyCryptoAVR.cpp"
 #elif defined(ARDUINO_ARCH_AVR)
 #include "hal/architecture/AVR/MyHwAVR.cpp"
 #include "hal/crypto/AVR/MyCryptoAVR.cpp"
@@ -449,6 +454,8 @@ MY_DEFAULT_RX_LED_PIN in your sketch instead to enable LEDs
 #include "hal/architecture/STM32F1/MyMainSTM32F1.cpp"
 #elif defined(__arm__) && defined(TEENSYDUINO)
 #include "hal/architecture/Teensy3/MyMainTeensy3.cpp"
+#elif defined(ARDUINO_ARCH_XI)
+#include "hal/architecture/lgt8f/MyMainlgt8f.cpp"
 #endif
 
 #endif
