@@ -90,7 +90,7 @@ void hwPowerDown(const uint8_t wdto)
 	MY_SERIALDEVICE.flush();
 #endif
 
-	PMU.sleep(PM_POFFS1, (period_t)wdto);
+	PMU.sleep(PM_POFFS0, (period_t)wdto);
 
 //	// disable ADC for power saving
 //	ADCSRA &= ~(1 << ADEN);
@@ -136,18 +136,31 @@ uint32_t hwInternalSleep(uint32_t ms)
 	// Round up to next multiple of 16ms, to assure we sleep at least the
 	// requested amount of time. Sleep of 0ms will not sleep at all!
 	//9
-	ms += 63u;
+	
+#if defined(__LGT8FX8E__) 
+		const uint16_t treshold = 128u;
+#else
+		const uint16_t treshold = 64u;
+#endif
 
-	while (!interruptWakeUp() && ms >= 64) {
-		for (uint16_t period = 5u; ; --period) {
-			const uint16_t comparatorMS = 1 << (period + 7);
+	ms += (treshold - 1);
+	while (!interruptWakeUp() && ms >= treshold) {
+		for (uint16_t period = 7u; ; --period) {
+
+#if defined(__LGT8FX8E__) 
+		//328D can sleep with same parameters, like a p-series, but something went wrong.
+		//instead of 8s it sleep only 7.5s in shifted "period"
+			uint16_t comparatorMS = 1 << (period + 7);
+#else
+			uint16_t comparatorMS = 1 << (period + 6);
+#endif
+			if (comparatorMS >= 1000) //round 1024..8192 to 1000..8000 ms
+						comparatorMS = (comparatorMS / 1000) * 1000;
 			if ( ms >= comparatorMS) {
 
-				Serial.print("ms sleep ");
-				Serial.println(comparatorMS);
-
-				Serial.print("period ");
-				Serial.println(period);
+				//Serial.print("ms sleep ");	Serial.print(comparatorMS);
+				//Serial.print(" period ");		Serial.print(period);
+				//Serial.print(" remain ");		Serial.println(ms - comparatorMS);
 
 				hwPowerDown(period); // 8192ms => 9, 16ms => 0
 				ms -= comparatorMS;
@@ -172,7 +185,7 @@ int8_t hwSleep(uint32_t ms)
 		sleepRemainingMs = hwInternalSleep(ms);
 	} else {
 		// sleep until ext interrupt triggered
-		PMU.sleep(PM_POFFS0, SLEEP_FOREVER);
+		PMU.sleep(PM_POFFS1, SLEEP_FOREVER);
 		//hwPowerDown(WDTO_SLEEP_FOREVER);
 	}
 	if (interruptWakeUp()) {
@@ -266,6 +279,8 @@ inline void hwRandomNumberInit(void)
 	// Generate 32 bits of datas
 	for (uint8_t i=0; i<32; i++) {
 		const int pinValue = analogRead(MY_SIGNING_SOFT_RANDOMSEED_PIN);
+		//after analog read MCU cannot sleep
+//_beginTest();
 		// Wait until the analog value has changed
 		while ((pinValue == analogRead(MY_SIGNING_SOFT_RANDOMSEED_PIN)) && (timeout>=millis())) {
 			seed ^= (millis() << i);
@@ -280,6 +295,8 @@ inline void hwRandomNumberInit(void)
 			}
 		}
 	}
+		
+
 	randomSeed(seed);
 }
 
@@ -324,8 +341,6 @@ bool hwUniqueID(unique_id_t *uniqueID)
 	*((uint8_t *)uniqueID + 2) = GUID2;
 	*((uint8_t *)uniqueID + 3) = GUID3;
 
-	//uint32_t guid = *(uint32_t*)&GUID0;
-	//*uniqueID = guid;
 	return true;
 }
 

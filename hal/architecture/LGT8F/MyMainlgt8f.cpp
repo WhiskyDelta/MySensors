@@ -21,8 +21,7 @@
 
 
 #include <stdint.h>
-//#include <avr/wdt.h>
-#include <WDT.h>
+#include <avr/wdt.h>
 #include <Arduino.h>
 
 #if defined(__LGT8FX8E__) || defined(__LGT8FX8P__)
@@ -129,11 +128,47 @@ void lgt8fx8x_init()
 #endif
 }
 
+// START CHANGE BY DBUEZAS & SEISFELD
+void lgt8fx8x_clk_src()
+{
+// select clock source
+#if defined(CLOCK_SOURCE)
+    #if CLOCK_SOURCE == 1
+        // internal clock is default, do nothing
+        // sysClock(INT_OSC);
+    #elif CLOCK_SOURCE == 2
+        sysClock(EXT_OSC);
+    #endif
+#endif
+
+// select clock prescaler
+#if defined(F_CPU)
+    CLKPR = 0x80;
+    #if F_CPU == 32000000L
+        CLKPR = 0x00;
+    #elif F_CPU == 16000000L
+        CLKPR = 0x01;
+    #elif F_CPU == 8000000L
+        CLKPR = 0x02;
+    #elif F_CPU == 4000000L
+        CLKPR = 0x03;
+    #elif F_CPU == 2000000L
+        CLKPR = 0x04;
+    #elif F_CPU == 1000000L
+        CLKPR = 0x05;
+    #endif
+#endif
+}
+// END CHANGE BY DBUEZAS & SEISFELD
+
 int main(void)
 {
 
 #if defined(__LGT8F__)
 	lgt8fx8x_init();
+	#if defined(CLOCK_SOURCE)
+	    lgt8fx8x_clk_src();
+	#endif
 #endif	
 
 	init();
@@ -143,17 +178,17 @@ int main(void)
 #if defined(USBCON)
 	USBDevice.attach();
 #endif
-	
-	//setup();
+
 	_begin(); // Startup MySensors library
-   
-	for (;;) {
+	
+	for(;;) {
 		_process();  // Process incoming data
 		if (loop) {
 			loop(); // Call sketch loop
 		}
-		//loop();
-		if (serialEventRun) serialEventRun();
+		if (serialEventRun) {
+			serialEventRun();
+		}
 	}
         
 	return 0;
