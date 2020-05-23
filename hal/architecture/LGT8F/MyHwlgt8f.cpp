@@ -30,6 +30,9 @@ bool hwInit(void)
 #if defined(MY_GATEWAY_SERIAL)
 	while (!MY_SERIALDEVICE) {}
 #endif
+#else
+    //Disable serial
+  PRR |= (1 << RUART0);
 #endif
 	return true;
 }
@@ -90,7 +93,19 @@ void hwPowerDown(const uint8_t wdto)
 	MY_SERIALDEVICE.flush();
 #endif
 
-	PMU.sleep(PM_POFFS0, (period_t)wdto);
+#if defined(__LGT8FX8P__)
+	//Disable ADC	
+	//PMU.sleep not sleep when ADC is enabled
+	ADCSRA &= ~(1 << ADEN);
+	//DISABLE ADC 
+	//PRR |= (1 << PRADC);
+
+#endif
+
+	PMU.sleep(PM_POFFS1, (period_t)wdto);
+
+	//Enable ADC
+	//PRR &= ~(1 << PRADC);
 
 //	// disable ADC for power saving
 //	ADCSRA &= ~(1 << ADEN);
