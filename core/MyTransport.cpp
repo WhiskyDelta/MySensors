@@ -702,7 +702,7 @@ void transportProcessMessage(void)
 		// Check if sender requests an echo.
 		if (_msg.getRequestEcho()) {
 			TRANSPORT_DEBUG(PSTR("TSF:MSG:ECHO REQ\n"));	// ECHO requested
-#ifndef DEBUG	
+#ifndef MY_DEBUG	
 		//dalay on speed MCU 3ooo - 2oo us
 		delayMicroseconds(256);
 #endif					
