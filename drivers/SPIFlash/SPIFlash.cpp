@@ -123,6 +123,8 @@ bool SPIFlash::initialize()
 }
 
 /// Get the manufacturer and device ID bytes (as a short word)
+// JEDEC code more and more lenght when two bytes, now (in 2020) - "12 bytes".
+// we skip 7F before code
 uint16_t SPIFlash::readDeviceId()
 {
 #if defined(__AVR_ATmega32U4__) // Arduino Leonardo, MoteinoLeo
@@ -131,8 +133,13 @@ uint16_t SPIFlash::readDeviceId()
 	select();
 	SPI.transfer(SPIFLASH_IDREAD);
 #endif
-	uint16_t jedecid = SPI.transfer(0) << 8;
-	jedecid |= SPI.transfer(0);
+
+	uint16_t jedecid = 0;
+	do {
+		jedecid = jedecid << 8;						// offset previous byte
+		jedecid |= SPI.transfer(0);				// read next byte JEDEC code
+	} while (jedecid && 0xFF == 0x7F);	// 0x7F is a continuation code according to JEDEC. 
+
 	unselect();
 	return jedecid;
 }
