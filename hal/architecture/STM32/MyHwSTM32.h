@@ -23,6 +23,7 @@
 #include <IWatchdog.h>
 #include <itoa.h>
 #include <SPI.h>
+#include <EEPROM.h>
 
 #ifdef __cplusplus
 #include <Arduino.h>

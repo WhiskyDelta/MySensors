@@ -49,20 +49,32 @@ void hwReadConfigBlock(void *buf, void *addr, size_t length)
 {
 	uint8_t *dst = static_cast<uint8_t *>(buf);
 	int offs = reinterpret_cast<int>(addr);
+#if !defined(DATA_EEPROM_BASE)
 	eeprom_buffer_fill();
 	while (length-- > 0) {
 		*dst++ = eeprom_buffered_read_byte(offs++);
 	}
+#else
+	while (length-- > 0) {
+		*dst++ = eeprom_read_byte(offs++);
+	}
+#endif
 }
 
 void hwWriteConfigBlock(void *buf, void *addr, size_t length)
 {
 	uint8_t *src = static_cast<uint8_t *>(buf);
 	int offs = reinterpret_cast<int>(addr);
+#if !defined(DATA_EEPROM_BASE)
 	while (length-- > 0) {
 		eeprom_buffered_write_byte(offs++, *src++);
 	}
 	eeprom_buffer_flush();
+#else
+	while (length-- > 0) {
+		eeprom_write_byte(offs++, *src++);
+	}
+#endif
 }
 
 uint8_t hwReadConfig(const int addr)
