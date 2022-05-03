@@ -24,6 +24,7 @@
 #include <itoa.h>
 #include <SPI.h>
 #include <EEPROM.h>
+#include "STM32LowPower.h"
 
 #ifdef __cplusplus
 #include <Arduino.h>

@@ -33,6 +33,35 @@ SPI1		PA5		PA6			PA7		PA4		PB0		NA
 
 */
 
+volatile uint8_t _wokeUpByInterrupt =
+    INVALID_INTERRUPT_NUM;    // Interrupt number that woke the mcu.
+volatile uint8_t _wakeUp1Interrupt  =
+    INVALID_INTERRUPT_NUM;    // Interrupt number for wakeUp1-callback.
+volatile uint8_t _wakeUp2Interrupt  =
+    INVALID_INTERRUPT_NUM;    // Interrupt number for wakeUp2-callback.
+
+static uint32_t sleepRemainingMs = 0ul;
+
+void wakeUp1(void)
+{
+	// First interrupt occurred will be reported only
+	if (INVALID_INTERRUPT_NUM == _wokeUpByInterrupt) {
+		_wokeUpByInterrupt = _wakeUp1Interrupt;
+	}
+}
+void wakeUp2(void)
+{
+	// First interrupt occurred will be reported only
+	if (INVALID_INTERRUPT_NUM == _wokeUpByInterrupt) {
+		_wokeUpByInterrupt = _wakeUp2Interrupt;
+	}
+}
+
+inline bool interruptWakeUp(void)
+{
+	return _wokeUpByInterrupt != INVALID_INTERRUPT_NUM;
+}
+
 bool hwInit(void)
 {
 #if !defined(MY_DISABLED_SERIAL)
@@ -41,7 +70,7 @@ bool hwInit(void)
 	while (!MY_SERIALDEVICE) {}
 #endif
 #endif
-
+	LowPower.begin();
 	return true;
 }
 
@@ -93,31 +122,56 @@ void hwWriteConfig(const int addr, uint8_t value)
 
 int8_t hwSleep(uint32_t ms)
 {
-	// TODO: Not supported!
-	(void)ms;
-	return MY_SLEEP_NOT_POSSIBLE;
+	// Return what woke the mcu.
+	// Default: no interrupt triggered, timer wake up
+	int8_t ret = MY_WAKE_UP_BY_TIMER;
+	
+	if (ms > 0u) {
+		// sleep for defined time
+		LowPower.deepSleep(ms);
+	} else {
+		// sleep until ext interrupt triggered
+		LowPower.deepSleep();
+	}
+	if (interruptWakeUp()) {
+		ret = static_cast<int8_t>(_wokeUpByInterrupt);
+	}
+	// Clear woke-up-by-interrupt flag, so next sleeps won't return immediately.
+	_wokeUpByInterrupt = INVALID_INTERRUPT_NUM;
+
+	return ret;
 }
 
 int8_t hwSleep(const uint8_t interrupt, const uint8_t mode, uint32_t ms)
 {
-	// TODO: Not supported!
-	(void)interrupt;
-	(void)mode;
-	(void)ms;
-	return MY_SLEEP_NOT_POSSIBLE;
+	return hwSleep(interrupt, mode, INVALID_INTERRUPT_NUM, 0u, ms);
 }
 
 int8_t hwSleep(const uint8_t interrupt1, const uint8_t mode1, const uint8_t interrupt2,
                const uint8_t mode2,
                uint32_t ms)
 {
-	// TODO: Not supported!
-	(void)interrupt1;
-	(void)mode1;
-	(void)interrupt2;
-	(void)mode2;
-	(void)ms;
-	return MY_SLEEP_NOT_POSSIBLE;
+	// According to STM32LowPower API following modes to wake from sleep are supported: HIGH, LOW, RISING, FALLING or CHANGE
+	// Ref: https://github.com/stm32duino/STM32LowPower
+	
+	// attach interrupts
+	_wakeUp1Interrupt  = interrupt1;
+	_wakeUp2Interrupt  = interrupt2;
+
+	if (interrupt1 != INVALID_INTERRUPT_NUM) {
+		LowPower.attachInterruptWakeup(interrupt1, wakeUp1, mode1, DEEP_SLEEP_MODE);
+	}
+	if (interrupt2 != INVALID_INTERRUPT_NUM) {
+		LowPower.attachInterruptWakeup(interrupt2, wakeUp2, mode2, DEEP_SLEEP_MODE);
+	}
+	
+	if (ms > 0u) {
+		// sleep for defined time
+		return hwSleep(ms);
+	} else {
+		// sleep until ext interrupt triggered
+		return hwSleep(0);
+	}
 }
 
 
